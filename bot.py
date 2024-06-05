@@ -379,6 +379,9 @@ def digital():
 
     custom = profile.get('fields', {})
 
+    # Might need this to change Custom Team retrieval ID when bot goes to WWT workspace
+    # print(custom)
+
     team = custom.get('Xf0769L5DU9M', {}).get('value', '')
 
     if "Digital" != team:
