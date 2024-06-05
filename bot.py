@@ -373,13 +373,17 @@ def digital():
 
     user = data.get('user_id')
 
-    response = client.users_info(user = user)
+    response = client.users_profile_get(user = user)
 
-    user_info = response['user']
+    profile = response['profile']
 
-    team = user_info['profile']['Current Team']
+    custom = profile.get('fields', {})
+    print(custom)
 
-    if 'Digital' not in team:
+
+    team = custom.get('Xf0769L5DU9M', {}).get('value', '')
+
+    if "Digital" != team:
          client.chat_postMessage(channel= data.get('channel_id'), text = "Only Digital members can use the bot.")
          return Response(), 200
 
