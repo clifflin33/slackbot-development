@@ -369,6 +369,22 @@ def digital():
 
     data = request.form
 
+    # check if user in Digital
+
+    user = data.get('user_id')
+
+    response = client.users_info(user = user)
+
+    user_info = response['user']
+
+    team = user_info['profile']['Current Team']
+
+    if 'Digital' not in team:
+         client.chat_postMessage(channel= data.get('channel_id'), text = "Only Digital members can use the bot.")
+         return Response(), 200
+
+    ############################
+
     command = data.get('text', '')
 
     if command == 'list channels':
