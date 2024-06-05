@@ -211,48 +211,6 @@ def channel_created(event_data):
 
 
 
-# workspace channels
-
-def display_channels():
-
-
-
-
-   public_channels = client.conversations_list(types="public_channel")
-
-   public_channels_list = "\n".join([f"• {channel['name']}" for channel in public_channels['channels']])
-
-
-
-
-
-
-   private_channels = client.conversations_list(types="private_channel")
-
-   private_channels_list = "\n".join([f"• {channel['name']}" for channel in private_channels['channels']])
-
-
-
-
-   
-
-   message_text = f"*Public Channels:*\n{public_channels_list}\n\n*Private Channels:*\n{private_channels_list}"
-
-
-
-
-
-
-   data = request.form
-
-   channel_id = data.get('channel_id')
-
-   client.chat_postMessage(channel= channel_id, text = message_text)
-
-   return Response(), 200
-
-
-
 
 # helper function for list channels
 
@@ -399,8 +357,6 @@ def help(commands):
 
 commands = {'list channels': 'lists all public and private Digital channels',
 
-            'workspace channels': 'lists all public and private channels in the workspace',
-
             'message count': 'shows the number of messages you sent in Digital channels',
 
             'help': 'provides an overview and available commands of the Digital Slackbot'}
@@ -419,10 +375,6 @@ def digital():
     if command == 'list channels':
 
          return digital_channels()
-
-    elif command == 'workspace channels':
-
-         return display_channels()
 
     elif command == 'message count':
 
