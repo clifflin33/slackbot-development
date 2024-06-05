@@ -378,8 +378,6 @@ def digital():
     profile = response['profile']
 
     custom = profile.get('fields', {})
-    print(custom)
-
 
     team = custom.get('Xf0769L5DU9M', {}).get('value', '')
 
