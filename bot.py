@@ -369,6 +369,27 @@ def digital():
 
     data = request.form
 
+    # check if user in Digital
+
+    user = data.get('user_id')
+
+    response = client.users_profile_get(user = user)
+
+    profile = response['profile']
+
+    custom = profile.get('fields', {})
+
+    # Might need this to change Custom Team retrieval ID when bot goes to WWT workspace
+    # print(custom)
+
+    team = custom.get('Xf0769L5DU9M', {}).get('value', '')
+
+    if "Digital" != team:
+         client.chat_postMessage(channel= data.get('channel_id'), text = "Only Digital members can use the bot.")
+         return Response(), 200
+
+    ############################
+
     command = data.get('text', '')
 
     if command == 'list channels':
