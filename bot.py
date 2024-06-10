@@ -18,12 +18,13 @@ import certifi
 import ssl
 
 
+
 #############################################################
 # Global variables
 #############################################################
 
 message_counts = {}
-
+users_store = {}
 
 
 
@@ -103,9 +104,6 @@ BOT_ID = client.api_call("auth.test")['user_id']
 # Response to a new message in a channel
 
 
-
-
-
 @slack_event_adapter.on('message')
 
 def message(payload):
@@ -142,9 +140,6 @@ def message(payload):
 @slack_event_adapter.on('channel_created')
 
 def channel_created(event_data):
-
-
-
 
    event = event_data['event']
 
@@ -207,6 +202,49 @@ def channel_created(event_data):
 # Functions which carry out the commands
 
 ###############################################################
+
+
+
+
+# workspace channels
+
+def display_channels():
+
+
+
+
+   public_channels = client.conversations_list(types="public_channel")
+
+   public_channels_list = "\n".join([f"• {channel['name']}" for channel in public_channels['channels']])
+
+
+
+
+
+
+   private_channels = client.conversations_list(types="private_channel")
+
+   private_channels_list = "\n".join([f"• {channel['name']}" for channel in private_channels['channels']])
+
+
+
+
+   
+
+   message_text = f"*Public Channels:*\n{public_channels_list}\n\n*Private Channels:*\n{private_channels_list}"
+
+
+
+
+
+
+   data = request.form
+
+   channel_id = data.get('channel_id')
+
+   client.chat_postMessage(channel= channel_id, text = message_text)
+
+   return Response(), 200
 
 
 
@@ -334,6 +372,57 @@ def help(commands):
    return Response(), 200
 
 
+# list user function
+
+def list_users():
+    fetch_and_save_users()
+
+    data = request.form
+    channel_id = data.get('channel_id')
+
+    try:
+        response = client.conversations_members(channel=channel_id)
+        user_ids = response['members']
+
+        user_names = []
+        bot_names = []
+
+        for user_id in user_ids:
+            user = users_store.get(user_id)
+            if user:
+                if user.get('is_bot', False):
+                    bot_names.append(user['real_name'])
+                else:
+                    user_names.append(user['real_name'])
+
+        user_list = "\n".join(user_names)
+        bot_list = "\n".join(bot_names)
+        message_text = f"*Bots in this channel:*\n{bot_list}\n\n*Users in this channel:*\n{user_list}"
+        client.chat_postMessage(channel=channel_id, text=message_text)
+
+    except SlackApiError as e:
+        error_message = f"Error fetching users: {e.response['error']}"
+        client.chat_postMessage(channel=channel_id, text=error_message)
+
+    return Response(), 200
+
+
+# helper function for list user
+
+def fetch_and_save_users():
+    try: 
+        result = client.users_list()
+        save_users(result["members"])
+
+    except SlackApiError as e:
+        logger.error("Error fetching users: {}".format(e))
+
+# helper function for list user
+
+def save_users(users_array):
+    for user in users_array:
+        user_id = user["id"]
+        users_store[user_id] = user
 
 
 ###############################################################
@@ -356,9 +445,13 @@ def help(commands):
 
 commands = {'list channels': 'lists all public and private Digital channels',
 
+            'workspace channels': 'lists all public and private channels in the workspace',
+
             'message count': 'shows the number of messages you sent in Digital channels',
 
-            'help': 'provides an overview and available commands of the Digital Slackbot'}
+            'help': 'provides an overview and available commands of the Digital Slackbot',
+
+            'users': 'shows the users that are in the channel'}
 
 
 
@@ -375,6 +468,10 @@ def digital():
 
          return digital_channels()
 
+    elif command == 'workspace channels':
+
+         return display_channels()
+
     elif command == 'message count':
 
          return message_count()
@@ -382,6 +479,10 @@ def digital():
     elif command == 'help':
 
          return help(commands)
+    
+    elif command == 'users':
+
+        return list_users()
 
     else:
 
@@ -409,4 +510,4 @@ def digital():
 
 if __name__ == "__main__":
 
-   app.run(debug=True, port = 8080)
+   app.run(debug=True, port = 5000)
