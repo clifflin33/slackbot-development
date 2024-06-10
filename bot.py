@@ -205,50 +205,6 @@ def channel_created(event_data):
 
 
 
-
-# workspace channels
-
-def display_channels():
-
-
-
-
-   public_channels = client.conversations_list(types="public_channel")
-
-   public_channels_list = "\n".join([f"• {channel['name']}" for channel in public_channels['channels']])
-
-
-
-
-
-
-   private_channels = client.conversations_list(types="private_channel")
-
-   private_channels_list = "\n".join([f"• {channel['name']}" for channel in private_channels['channels']])
-
-
-
-
-   
-
-   message_text = f"*Public Channels:*\n{public_channels_list}\n\n*Private Channels:*\n{private_channels_list}"
-
-
-
-
-
-
-   data = request.form
-
-   channel_id = data.get('channel_id')
-
-   client.chat_postMessage(channel= channel_id, text = message_text)
-
-   return Response(), 200
-
-
-
-
 # helper function for list channels
 
 def get_channel_owner(user_id):
@@ -270,22 +226,14 @@ def get_channel_info(channel_id):
 
 
 
-
-
-
-
-
 # list channels
 
 def digital_channels():
 
-    
 
    public_channels = client.conversations_list(types="public_channel")['channels']
 
    public_channels = [channel for channel in public_channels if channel['name'].startswith('d-')]
-
-
 
 
    private_channels = client.conversations_list(types="private_channel")['channels']
@@ -293,11 +241,7 @@ def digital_channels():
    private_channels = [channel for channel in private_channels if channel['name'].startswith('d-')]
 
 
-
-
    message_text = "*Digital Channels:*\n"
-
-
 
 
    for channel in public_channels + private_channels:
@@ -322,14 +266,9 @@ def digital_channels():
 
 
 
-
-
-
    client.chat_postMessage(channel=request.form.get('channel_id'), text=message_text)
 
    return Response(), 200
-
-
 
 
 
@@ -354,7 +293,6 @@ def message_count():
 
 
 
-
 # help
 
 def help(commands):
@@ -370,6 +308,8 @@ def help(commands):
    client.chat_postMessage(channel=request.form.get('channel_id'), text=message)
 
    return Response(), 200
+
+
 
 
 # list user function
@@ -445,8 +385,6 @@ def save_users(users_array):
 
 commands = {'list channels': 'lists all public and private Digital channels',
 
-            'workspace channels': 'lists all public and private channels in the workspace',
-
             'message count': 'shows the number of messages you sent in Digital channels',
 
             'help': 'provides an overview and available commands of the Digital Slackbot',
@@ -461,6 +399,27 @@ commands = {'list channels': 'lists all public and private Digital channels',
 def digital():
 
     data = request.form
+
+    # check if user in Digital
+
+    user = data.get('user_id')
+
+    response = client.users_profile_get(user = user)
+
+    profile = response['profile']
+
+    custom = profile.get('fields', {})
+
+    # Might need this to change Custom Team retrieval ID when bot goes to WWT workspace
+    # print(custom)
+
+    team = custom.get('Xf0769L5DU9M', {}).get('value', '')
+
+    if "Digital" != team:
+         client.chat_postMessage(channel= data.get('channel_id'), text = "Only Digital members can use the bot.")
+         return Response(), 200
+
+    ############################
 
     command = data.get('text', '')
 
