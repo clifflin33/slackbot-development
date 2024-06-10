@@ -231,13 +231,10 @@ def get_channel_info(channel_id):
 
 def digital_channels():
 
-    
 
    public_channels = client.conversations_list(types="public_channel")['channels']
 
    public_channels = [channel for channel in public_channels if channel['name'].startswith('d-')]
-
-
 
 
    private_channels = client.conversations_list(types="private_channel")['channels']
@@ -245,11 +242,7 @@ def digital_channels():
    private_channels = [channel for channel in private_channels if channel['name'].startswith('d-')]
 
 
-
-
    message_text = "*Digital Channels:*\n"
-
-
 
 
    for channel in public_channels + private_channels:
@@ -274,14 +267,9 @@ def digital_channels():
 
 
 
-
-
-
    client.chat_postMessage(channel=request.form.get('channel_id'), text=message_text)
 
    return Response(), 200
-
-
 
 
 
@@ -306,7 +294,6 @@ def message_count():
 
 
 
-
 # help
 
 def help(commands):
@@ -322,6 +309,8 @@ def help(commands):
    client.chat_postMessage(channel=request.form.get('channel_id'), text=message)
 
    return Response(), 200
+
+
 
 
 # list user function
