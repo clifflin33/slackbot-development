@@ -318,10 +318,20 @@ def help(commands):
 # list user function
 
 def list_users():
-    fetch_and_save_users()
 
     data = request.form
     channel_id = data.get('channel_id')
+
+    channel_info = client.conversations_info(channel=channel_id)
+    channel_name = channel_info['channel']['name']
+
+    if not channel_name.startswith('d-'):
+        message_text = "This command can only be used in digital channels"
+        client.chat_postMessage(channel=channel_id, text=message_text)
+        return Response(), 200
+   
+   
+    fetch_and_save_users()
 
     try:
         response = client.conversations_members(channel=channel_id)
@@ -387,7 +397,9 @@ def check_digital(user_id):
         profiles = data_check.get('data', [])
         for profile in profiles:
             if (profile.get('fullName') == name and
-                    ('Digital' in profile.get('department', '') or 'Interns' in profile.get('department', ''))):
+                    ('SOL Digital Overhead' == profile.get('department', '') or 
+                     'CS Digital Billable' == profile.get('department', '') or 
+                     'SOL Digital SSA' == profile.get('department', ''))):
                 return True
         return False
     else:
