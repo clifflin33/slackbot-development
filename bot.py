@@ -10,6 +10,8 @@ from slack_sdk import WebClient
 
 from flask import Flask, request, Response, jsonify
 
+import requests
+
 from slackeventsapi import SlackEventAdapter
 
 from slack_sdk.errors import SlackApiError
@@ -18,12 +20,13 @@ import certifi
 import ssl
 
 
+
 #############################################################
 # Global variables
 #############################################################
 
 message_counts = {}
-
+users_store = {}
 
 
 
@@ -63,14 +66,14 @@ slack_event_adapter = SlackEventAdapter(signing_secret,'/slack/events', app)
 
 
 
-# Handle the Slack URL verification challenge
-@app.route("/slack/events", methods=["POST"])
-def slack_events():
-    if request.headers['Content-Type'] == 'application/json':
-        data = request.get_json()
-        if 'challenge' in data:
-            return jsonify({"challenge": data['challenge']})
-    return "OK"
+# # Handle the Slack URL verification challenge
+# @app.route("/slack/events", methods=["POST"])
+# def slack_events():
+#     if request.headers['Content-Type'] == 'application/json':
+#         data = request.get_json()
+#         if 'challenge' in data:
+#             return jsonify({"challenge": data['challenge']})
+#     return "OK"
 
 
 # initialize the slack client
@@ -101,9 +104,6 @@ BOT_ID = client.api_call("auth.test")['user_id']
 
 
 # Response to a new message in a channel
-
-
-
 
 
 @slack_event_adapter.on('message')
@@ -142,9 +142,6 @@ def message(payload):
 @slack_event_adapter.on('channel_created')
 
 def channel_created(event_data):
-
-
-
 
    event = event_data['event']
 
@@ -232,22 +229,14 @@ def get_channel_info(channel_id):
 
 
 
-
-
-
-
-
 # list channels
 
 def digital_channels():
 
-    
 
    public_channels = client.conversations_list(types="public_channel")['channels']
 
    public_channels = [channel for channel in public_channels if channel['name'].startswith('d-')]
-
-
 
 
    private_channels = client.conversations_list(types="private_channel")['channels']
@@ -255,11 +244,7 @@ def digital_channels():
    private_channels = [channel for channel in private_channels if channel['name'].startswith('d-')]
 
 
-
-
    message_text = "*Digital Channels:*\n"
-
-
 
 
    for channel in public_channels + private_channels:
@@ -284,14 +269,9 @@ def digital_channels():
 
 
 
-
-
-
    client.chat_postMessage(channel=request.form.get('channel_id'), text=message_text)
 
    return Response(), 200
-
-
 
 
 
@@ -316,7 +296,6 @@ def message_count():
 
 
 
-
 # help
 
 def help(commands):
@@ -332,6 +311,102 @@ def help(commands):
    client.chat_postMessage(channel=request.form.get('channel_id'), text=message)
 
    return Response(), 200
+
+
+
+
+# list user function
+
+def list_users():
+
+    data = request.form
+    channel_id = data.get('channel_id')
+
+    channel_info = client.conversations_info(channel=channel_id)
+    channel_name = channel_info['channel']['name']
+
+    if not channel_name.startswith('d-'):
+        message_text = "This command can only be used in digital channels"
+        client.chat_postMessage(channel=channel_id, text=message_text)
+        return Response(), 200
+   
+   
+    fetch_and_save_users()
+
+    try:
+        response = client.conversations_members(channel=channel_id)
+        user_ids = response['members']
+
+        user_names = []
+        bot_names = []
+
+        for user_id in user_ids:
+            user = users_store.get(user_id)
+            if user:
+                if user.get('is_bot', False):
+                    bot_names.append(user['real_name'])
+                else:
+                    user_names.append(user['real_name'])
+
+        user_list = "\n".join(user_names)
+        bot_list = "\n".join(bot_names)
+        message_text = f"*Bots in this channel:*\n{bot_list}\n\n*Users in this channel:*\n{user_list}"
+        client.chat_postMessage(channel=channel_id, text=message_text)
+
+    except SlackApiError as e:
+        error_message = f"Error fetching users: {e.response['error']}"
+        client.chat_postMessage(channel=channel_id, text=error_message)
+
+    return Response(), 200
+
+
+# helper function for list user
+
+def fetch_and_save_users():
+    try: 
+        result = client.users_list()
+        save_users(result["members"])
+
+    except SlackApiError as e:
+        logger.error("Error fetching users: {}".format(e))
+
+# helper function for list user
+
+def save_users(users_array):
+    for user in users_array:
+        user_id = user["id"]
+        users_store[user_id] = user
+
+
+
+
+
+#check if user is in digital 
+def check_digital(user_id):
+    user_info = client.users_info(user=user_id)
+
+    # name = user_info['user']['real_name']
+    name = 'Eddie Du Vall'
+    target = 'https://www.wwt.com/api/corpsite/profiles?search=' + name
+    response = requests.get(target)
+
+    if response.status_code == 200:
+        print('request successful')
+        print(response.text)
+        data_check = response.json()
+        profiles = data_check.get('data', [])
+        for profile in profiles:
+            if (profile.get('fullName') == name and
+                    ('SOL Digital Overhead' == profile.get('department', '') or 
+                     'CS Digital Billable' == profile.get('department', '') or 
+                     'SOL Digital SSA' == profile.get('department', ''))):
+                return True
+        return False
+    else:
+        print('request fail')
+        return 404
+
+
 
 
 
@@ -358,7 +433,9 @@ commands = {'list channels': 'lists all public and private Digital channels',
 
             'message count': 'shows the number of messages you sent in Digital channels',
 
-            'help': 'provides an overview and available commands of the Digital Slackbot'}
+            'help': 'provides an overview and available commands of the Digital Slackbot',
+
+            'users': 'shows the users that are in the channel'}
 
 
 
@@ -371,20 +448,13 @@ def digital():
 
     # check if user in Digital
 
-    user = data.get('user_id')
+    team = check_digital( data.get('user_id'))
 
-    response = client.users_profile_get(user = user)
+    if team == 404:
+         client.chat_postMessage(channel= data.get('channel_id'), text = "Error in verifying your team.")
+         return Response(), 200
 
-    profile = response['profile']
-
-    custom = profile.get('fields', {})
-
-    # Might need this to change Custom Team retrieval ID when bot goes to WWT workspace
-    # print(custom)
-
-    team = custom.get('Xf0769L5DU9M', {}).get('value', '')
-
-    if "Digital" != team:
+    if not team:
          client.chat_postMessage(channel= data.get('channel_id'), text = "Only Digital members can use the bot.")
          return Response(), 200
 
@@ -403,6 +473,10 @@ def digital():
     elif command == 'help':
 
          return help(commands)
+    
+    elif command == 'users':
+
+        return list_users()
 
     else:
 
