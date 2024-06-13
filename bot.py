@@ -10,6 +10,8 @@ from slack_sdk import WebClient
 
 from flask import Flask, request, Response, jsonify
 
+import requests
+
 from slackeventsapi import SlackEventAdapter
 
 from slack_sdk.errors import SlackApiError
@@ -64,14 +66,14 @@ slack_event_adapter = SlackEventAdapter(signing_secret,'/slack/events', app)
 
 
 
-# Handle the Slack URL verification challenge
-@app.route("/slack/events", methods=["POST"])
-def slack_events():
-    if request.headers['Content-Type'] == 'application/json':
-        data = request.get_json()
-        if 'challenge' in data:
-            return jsonify({"challenge": data['challenge']})
-    return "OK"
+# # Handle the Slack URL verification challenge
+# @app.route("/slack/events", methods=["POST"])
+# def slack_events():
+#     if request.headers['Content-Type'] == 'application/json':
+#         data = request.get_json()
+#         if 'challenge' in data:
+#             return jsonify({"challenge": data['challenge']})
+#     return "OK"
 
 
 # initialize the slack client
@@ -316,10 +318,20 @@ def help(commands):
 # list user function
 
 def list_users():
-    fetch_and_save_users()
 
     data = request.form
     channel_id = data.get('channel_id')
+
+    channel_info = client.conversations_info(channel=channel_id)
+    channel_name = channel_info['channel']['name']
+
+    if not channel_name.startswith('d-'):
+        message_text = "This command can only be used in digital channels"
+        client.chat_postMessage(channel=channel_id, text=message_text)
+        return Response(), 200
+   
+   
+    fetch_and_save_users()
 
     try:
         response = client.conversations_members(channel=channel_id)
@@ -366,6 +378,39 @@ def save_users(users_array):
         users_store[user_id] = user
 
 
+
+
+
+#check if user is in digital 
+def check_digital(user_id):
+    user_info = client.users_info(user=user_id)
+
+    # name = user_info['user']['real_name']
+    name = 'Eddie Du Vall'
+    target = 'https://www.wwt.com/api/corpsite/profiles?search=' + name
+    response = requests.get(target)
+
+    if response.status_code == 200:
+        print('request successful')
+        print(response.text)
+        data_check = response.json()
+        profiles = data_check.get('data', [])
+        for profile in profiles:
+            if (profile.get('fullName') == name and
+                    ('SOL Digital Overhead' == profile.get('department', '') or 
+                     'CS Digital Billable' == profile.get('department', '') or 
+                     'SOL Digital SSA' == profile.get('department', ''))):
+                return True
+        return False
+    else:
+        print('request fail')
+        return 404
+
+
+
+
+
+
 ###############################################################
 
 
@@ -401,22 +446,15 @@ def digital():
 
     data = request.form
 
-     # check if user in Digital
+    # check if user in Digital
 
-    user = data.get('user_id')
+    team = check_digital( data.get('user_id'))
 
-    response = client.users_profile_get(user = user)
+    if team == 404:
+         client.chat_postMessage(channel= data.get('channel_id'), text = "Error in verifying your team.")
+         return Response(), 200
 
-    profile = response['profile']
-
-    custom = profile.get('fields', {})
-
-    # Might need this to change Custom Team retrieval ID when bot goes to WWT workspace
-    # print(custom)
-
-    team = custom.get('Xf0769L5DU9M', {}).get('value', '')
-
-    if "Digital" != team:
+    if not team:
          client.chat_postMessage(channel= data.get('channel_id'), text = "Only Digital members can use the bot.")
          return Response(), 200
 
