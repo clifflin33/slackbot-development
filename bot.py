@@ -385,8 +385,8 @@ def save_users(users_array):
 def check_digital(user_id):
     user_info = client.users_info(user=user_id)
 
-    # name = user_info['user']['real_name']
-    name = 'Eddie Du Vall'
+    name = user_info['user']['real_name']
+    # name = 'Eddie Du Vall'
     target = 'https://www.wwt.com/api/corpsite/profiles?search=' + name
     response = requests.get(target)
 
