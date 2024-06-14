@@ -158,7 +158,13 @@ def channel_created(event_data):
 
            client.conversations_join(channel=channel['id'])
 
-           client.chat_postMessage(channel=channel['id'], text="Welcome to your new Digital channel! Type /digital help for more info.")
+           response_url = request.form.get('response_url')
+           response_data = {
+                "response_type": "ephemeral", 
+                "text": "Welcome to your new Digital Channel! Use /digital help for more info"
+            }
+
+           requests.post(response_url, json=response_data)
 
        except SlackApiError as e:
 
@@ -268,8 +274,13 @@ def digital_channels():
            message_text += f"*• {channel['name']}*\n    - Owner: Unknown\n    - Description: No description available\n\n"
 
 
+   response_url = request.form.get('response_url')
+   response_data = {
+        "response_type": "ephemeral", 
+        "text": message_text
+    }
 
-   client.chat_postMessage(channel=request.form.get('channel_id'), text=message_text)
+   requests.post(response_url, json=response_data)
 
    return Response(), 200
 
@@ -284,11 +295,15 @@ def message_count():
 
    user_id = data.get('user_id')
 
-   channel_id = data.get('channel_id')
-
    message_count = message_counts.get(user_id, 0)
 
-   client.chat_postMessage(channel= channel_id, text = f"You sent {message_count} message(s) in Digital channels!")
+   response_url = request.form.get('response_url')
+   response_data = {
+        "response_type": "ephemeral", 
+        "text":  f"You sent {message_count} message(s) in Digital channels!"
+    }
+
+   requests.post(response_url, json=response_data)
 
    return Response(), 200
 
@@ -306,9 +321,14 @@ def help(commands):
 
          message += f"*• {command}*\n    - {commands[command]}\n\n"
 
-   
 
-   client.chat_postMessage(channel=request.form.get('channel_id'), text=message)
+   response_url = request.form.get('response_url')
+   response_data = {
+        "response_type": "ephemeral", 
+        "text": message
+    }
+
+   requests.post(response_url, json=response_data)
 
    return Response(), 200
 
@@ -327,7 +347,14 @@ def list_users():
 
     if not channel_name.startswith('d-'):
         message_text = "This command can only be used in digital channels"
-        client.chat_postMessage(channel=channel_id, text=message_text)
+        
+        response_url = request.form.get('response_url')
+        response_data = {
+                 "response_type": "ephemeral", 
+                "text": message_text
+        }
+
+        requests.post(response_url, json=response_data)
         return Response(), 200
    
    
@@ -351,11 +378,25 @@ def list_users():
         user_list = "\n".join(user_names)
         bot_list = "\n".join(bot_names)
         message_text = f"*Bots in this channel:*\n{bot_list}\n\n*Users in this channel:*\n{user_list}"
-        client.chat_postMessage(channel=channel_id, text=message_text)
+        
+        response_url = request.form.get('response_url')
+        response_data = {
+                 "response_type": "ephemeral", 
+                "text": message_text
+        }
+
+        requests.post(response_url, json=response_data)
 
     except SlackApiError as e:
         error_message = f"Error fetching users: {e.response['error']}"
-        client.chat_postMessage(channel=channel_id, text=error_message)
+       
+        response_url = request.form.get('response_url')
+        response_data = {
+                 "response_type": "ephemeral", 
+                "text": error_message
+        }
+
+        requests.post(response_url, json=response_data)
 
     return Response(), 200
 
@@ -386,7 +427,7 @@ def check_digital(user_id):
     user_info = client.users_info(user=user_id)
 
     name = user_info['user']['real_name']
-    # name = 'Eddie Du Vall'
+    name = 'Eddie Du Vall'
     target = 'https://www.wwt.com/api/corpsite/profiles?search=' + name
     response = requests.get(target)
 
@@ -451,12 +492,25 @@ def digital():
     team = check_digital( data.get('user_id'))
 
     if team == 404:
-         client.chat_postMessage(channel= data.get('channel_id'), text = "Error in verifying your team.")
-         return Response(), 200
+         
+        response_url = request.form.get('response_url')
+        response_data = {
+            "response_type": "ephemeral", 
+            "text": "Error in verifying your current team"
+        }
+
+        requests.post(response_url, json=response_data)
+        return Response(), 200
 
     if not team:
-         client.chat_postMessage(channel= data.get('channel_id'), text = "Only Digital members can use the bot.")
-         return Response(), 200
+        response_url = request.form.get('response_url')
+        response_data = {
+            "response_type": "ephemeral", 
+            "text": "Error in verifying your current team"
+        }
+
+        requests.post(response_url, json=response_data)
+        return Response(), 200
 
     ############################
 
@@ -479,10 +533,12 @@ def digital():
         return list_users()
 
     else:
-
-         client.chat_postMessage(channel= data.get('channel_id'),
-
-            text = "Not a valid command. Use ** /digital help ** for a list of available commands!")
+         
+         response_url = request.form.get('response_url')
+         response_data = {
+            "response_type": "ephemeral", 
+            "text": "Not a valid command. Use ** /digital help ** for a list of available commands!"
+         }
 
          return Response(), 200
 
