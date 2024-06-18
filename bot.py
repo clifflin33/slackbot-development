@@ -386,7 +386,7 @@ def check_digital(user_id):
     user_info = client.users_info(user=user_id)
 
     name = user_info['user']['real_name']
-    # name = 'Eddie Du Vall'
+    name = 'Eddie Du Vall'
     target = 'https://www.wwt.com/api/corpsite/profiles?search=' + name
     response = requests.get(target)
 
@@ -406,6 +406,34 @@ def check_digital(user_id):
         print('request fail')
         return 404
 
+
+# list bookmarks function
+
+def list_bookmarks():
+    data = request.form
+    channel_id = data.get('channel_id')
+
+    try:
+        # Fetch the list of bookmarks using the bookmarks.list API
+        response = client.api_call("bookmarks.list", params={"channel_id": channel_id})
+        if response.get("ok"):
+            bookmarks = response['bookmarks']
+            if bookmarks:
+                message_text = "*Bookmarks in this channel:*\n"
+                for bookmark in bookmarks:
+                    message_text += f"*• {bookmark['title']}*\n    - Link: {bookmark['link']}\n\n"
+            else:
+                message_text = "No bookmarks found in this channel."
+        else:
+            message_text = f"Error fetching bookmarks: {response['error']}"
+
+        client.chat_postMessage(channel=channel_id, text=message_text)
+
+    except SlackApiError as e:
+        error_message = f"Error fetching bookmarks: {e.response['error']}"
+        client.chat_postMessage(channel=channel_id, text=error_message)
+
+    return Response(), 200
 
 
 
@@ -435,7 +463,10 @@ commands = {'list channels': 'lists all public and private Digital channels',
 
             'help': 'provides an overview and available commands of the Digital Slackbot',
 
-            'users': 'shows the users that are in the channel'}
+            'users': 'shows the users that are in the channel',
+            
+            'list bookmarks': 'shows all bookmarks in the current channel'
+            }
 
 
 
@@ -477,6 +508,10 @@ def digital():
     elif command == 'users':
 
         return list_users()
+    
+    elif command == 'list bookmarks':
+
+        return list_bookmarks()
 
     else:
 
