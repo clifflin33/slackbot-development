@@ -454,6 +454,22 @@ def list_bookmarks():
     data = request.form
     channel_id = data.get('channel_id')
 
+    channel_info = client.conversations_info(channel=channel_id)
+    channel_name = channel_info['channel']['name']
+
+    if not channel_name.startswith('d-'):
+        message_text = "This command can only be used in digital channels"
+        
+        response_url = request.form.get('response_url')
+        response_data = {
+                 "response_type": "ephemeral", 
+                "text": message_text
+        }
+
+        requests.post(response_url, json=response_data)
+        return Response(), 200
+   
+
     try:
         # Fetch the list of bookmarks using the bookmarks.list API
         response = client.api_call("bookmarks.list", params={"channel_id": channel_id})
