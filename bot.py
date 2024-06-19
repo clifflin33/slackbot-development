@@ -468,11 +468,26 @@ def list_bookmarks():
         else:
             message_text = f"Error fetching bookmarks: {response['error']}"
 
-        client.chat_postMessage(channel=channel_id, text=message_text)
+        response_url = request.form.get('response_url')
+        response_data = {
+                 "response_type": "ephemeral", 
+                "text": message_text
+        }
+
+        requests.post(response_url, json=response_data)
+
 
     except SlackApiError as e:
         error_message = f"Error fetching bookmarks: {e.response['error']}"
-        client.chat_postMessage(channel=channel_id, text=error_message)
+        
+        response_url = request.form.get('response_url')
+        response_data = {
+                 "response_type": "ephemeral", 
+                "text": error_message
+        }
+
+        requests.post(response_url, json=response_data)
+
 
     return Response(), 200
 
