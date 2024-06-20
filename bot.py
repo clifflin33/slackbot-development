@@ -492,15 +492,6 @@ def list_bookmarks():
 
         requests.post(response_url, json=response_data)
 
-        response_url = request.form.get('response_url')
-        response_data = {
-                 "response_type": "ephemeral", 
-                "text": message_text
-        }
-
-        requests.post(response_url, json=response_data)
-
-
     except SlackApiError as e:
         error_message = f"Error fetching bookmarks: {e.response['error']}"
        
