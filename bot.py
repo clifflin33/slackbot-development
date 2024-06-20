@@ -608,13 +608,13 @@ def digital():
 
     else:
          
-         response_url = request.form.get('response_url')
-         response_data = {
+        response_url = request.form.get('response_url')
+        response_data = {
             "response_type": "ephemeral", 
             "text": "Not a valid command. Use ** /digital help ** for a list of available commands!"
-         }
-
-         return Response(), 200
+        }
+        requests.post(response_url, json=response_data)
+        return Response(), 200
 
     
 
